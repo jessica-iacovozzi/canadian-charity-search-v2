@@ -100,7 +100,8 @@ cp .env.example .env
 Edit `.env` with your database credentials:
 
 ```env
-DATABASE_URL=postgresql://username:password@localhost:5432/charities_db
+ENVIRONMENT=local
+DATABASE_URL_LOCAL=postgresql://username:password@localhost:5432/charities_db
 API_HOST=0.0.0.0
 API_PORT=8000
 SCRAPER_DELAY=1
@@ -238,7 +239,8 @@ Edit `frontend/app/globals.css` or component styles in `frontend/app/page.tsx`
 
 ### Database Connection Issues
 - Verify PostgreSQL is running: `pg_isready`
-- Check DATABASE_URL in `.env`
+- Check DATABASE_URL_LOCAL (or DATABASE_URL_PROD) in `.env`
+- Ensure ENVIRONMENT variable is set correctly
 - Ensure database exists: `psql -l`
 
 ### Scraper Not Finding Data
@@ -277,7 +279,7 @@ Edit `frontend/app/globals.css` or component styles in `frontend/app/page.tsx`
 - GitHub account for repository hosting
 - Vercel account (for frontend hosting)
 - Supabase account (for PostgreSQL database)
-- Railway/Render account (for API hosting)
+- Fly.io account (for API hosting)
 
 ### Step 1: Database Setup (Supabase)
 
@@ -286,7 +288,8 @@ Edit `frontend/app/globals.css` or component styles in `frontend/app/page.tsx`
 3. Copy the connection string (URI format)
 4. Run the database initialization:
    ```bash
-   # Update DATABASE_URL in .env with Supabase connection string
+   # Update DATABASE_URL_PROD in .env with Supabase connection string
+   # Set ENVIRONMENT=production
    python database/models.py
    ```
 5. Run the scraper to populate data:
@@ -294,27 +297,30 @@ Edit `frontend/app/globals.css` or component styles in `frontend/app/page.tsx`
    python scraper/charity_scraper.py
    ```
 
-### Step 2: API Deployment (Railway/Render)
+### Step 2: API Deployment (Fly.io)
 
-#### Option A: Railway
-1. Create new project on [Railway](https://railway.app)
-2. Connect your GitHub repository
-3. Add environment variables:
+1. Install Fly CLI: `curl -L https://fly.io/install.sh | sh`
+2. Login: `fly auth login`
+3. Launch app from project root:
+   ```bash
+   fly launch
    ```
-   DATABASE_URL=<your-supabase-connection-string>
-   API_HOST=0.0.0.0
-   API_PORT=8000
+4. When prompted:
+   - Choose app name (e.g., `canadian-charity-api`)
+   - Select region closest to your users
+   - Don't add PostgreSQL (you're using Supabase)
+   - Don't deploy yet
+5. Set environment variables:
+   ```bash
+   fly secrets set ENVIRONMENT=production
+   fly secrets set DATABASE_URL_PROD=<your-supabase-connection-string>
    ```
-4. Set start command: `uvicorn api.main:app --host 0.0.0.0 --port $PORT`
-5. Deploy and note the public URL
+6. Deploy: `fly deploy`
+7. Note your app URL: `https://your-app.fly.dev`
 
-#### Option B: Render
-1. Create new Web Service on [Render](https://render.com)
-2. Connect your GitHub repository
-3. Set build command: `pip install -r requirements.txt`
-4. Set start command: `uvicorn api.main:app --host 0.0.0.0 --port $PORT`
-5. Add environment variables (same as Railway)
-6. Deploy and note the public URL
+**Alternative Options:**
+- **Railway**: Similar setup, auto-detects Python, set start command
+- **Render**: Free tier available, connect GitHub repo
 
 ### Step 3: Frontend Deployment (Vercel)
 
@@ -349,14 +355,23 @@ Edit `frontend/app/globals.css` or component styles in `frontend/app/page.tsx`
 
 **API (.env)**:
 ```env
-DATABASE_URL=postgresql://user:pass@host:5432/db
+ENVIRONMENT=local
+DATABASE_URL_LOCAL=postgresql://user:pass@localhost:5432/db
+API_HOST=0.0.0.0
+API_PORT=8000
+```
+
+**Production (.env)**:
+```env
+ENVIRONMENT=production
+DATABASE_URL_PROD=postgresql://user:pass@host:5432/db
 API_HOST=0.0.0.0
 API_PORT=8000
 ```
 
 **Frontend (.env.local)**:
 ```env
-NEXT_PUBLIC_API_URL=https://your-api-url.railway.app
+NEXT_PUBLIC_API_URL=https://your-api-url.fly.dev
 ```
 
 ### Security Considerations
@@ -371,7 +386,7 @@ NEXT_PUBLIC_API_URL=https://your-api-url.railway.app
 ### Maintenance
 
 - **Database backups**: Supabase provides automatic backups
-- **Update data**: Run scraper periodically (consider setting up cron job)
+- **Update data**: Run scraper manually once a year or as needed
 - **Monitor costs**: Check usage on all platforms
 - **Update dependencies**: Keep packages up to date for security
 

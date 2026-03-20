@@ -1,6 +1,6 @@
 # 🚀 Production Deployment Guide
 
-This guide walks you through deploying the Canadian Charity Search Platform to production using GitHub, Vercel, Supabase, and Railway/Render.
+This guide walks you through deploying the Canadian Charity Search Platform to production using GitHub, Vercel, Supabase, and Fly.io.
 
 ## 📋 Pre-Deployment Checklist
 
@@ -58,7 +58,8 @@ git push -u origin main
 ### 2.3 Initialize Database Schema
 ```bash
 # Update your local .env with Supabase connection string
-DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@db.xxx.supabase.co:5432/postgres
+ENVIRONMENT=production
+DATABASE_URL_PROD=postgresql://postgres:YOUR_PASSWORD@db.xxx.supabase.co:5432/postgres
 
 # Run database initialization
 python database/models.py
@@ -87,49 +88,128 @@ Scraping page 2...
 
 ---
 
-## 🔧 Step 3: API Deployment (Railway)
+## 🔧 Step 3: API Deployment (Fly.io)
 
-### 3.1 Create Railway Account
-1. Go to [Railway](https://railway.app)
-2. Sign up with GitHub (recommended for easier integration)
-
-### 3.2 Create New Project
-1. Click **"New Project"**
-2. Select **"Deploy from GitHub repo"**
-3. Select your `canadian-charity-search` repository
-4. Railway will detect it's a Python project
-
-### 3.3 Configure Environment Variables
-1. Go to **Variables** tab
-2. Add the following variables:
-   ```
-   DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@db.xxx.supabase.co:5432/postgres
-   API_HOST=0.0.0.0
-   API_PORT=8000
-   ```
-
-### 3.4 Configure Start Command
-1. Go to **Settings** tab
-2. Under **Deploy**, set:
-   - **Build Command**: `pip install -r requirements.txt`
-   - **Start Command**: `uvicorn api.main:app --host 0.0.0.0 --port $PORT`
-
-### 3.5 Deploy
-1. Click **Deploy**
-2. Wait for deployment to complete (~2-3 minutes)
-3. Once deployed, click on the deployment to get your API URL
-4. Copy the URL (e.g., `https://canadian-charity-search-production.up.railway.app`)
-
-### 3.6 Test API
+### 3.1 Install Fly CLI
 ```bash
-# Replace with your actual Railway URL
-curl https://your-app.railway.app/
-curl https://your-app.railway.app/charities?page=1&page_size=5
+# macOS/Linux
+curl -L https://fly.io/install.sh | sh
+
+# Windows (PowerShell)
+powershell -Command "iwr https://fly.io/install.ps1 -useb | iex"
+```
+
+### 3.2 Login to Fly.io
+```bash
+fly auth login
+```
+This will open a browser window for authentication.
+
+### 3.3 Create Fly Configuration
+From your project root directory:
+```bash
+fly launch
+```
+
+Answer the prompts:
+- **App Name**: `canadian-charity-api` (or your preferred name)
+- **Region**: Choose closest to your users (e.g., `yyz` for Toronto)
+- **PostgreSQL database**: **No** (you're using Supabase)
+- **Deploy now**: **No** (we need to configure first)
+
+This creates a `fly.toml` configuration file.
+
+### 3.4 Update fly.toml
+Edit the generated `fly.toml`:
+```toml
+app = "canadian-charity-api"
+primary_region = "yyz"
+
+[build]
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 256
+```
+
+### 3.5 Create Dockerfile
+Create `Dockerfile` in project root:
+```dockerfile
+FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+EXPOSE 8000
+
+CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+### 3.6 Set Environment Variables
+```bash
+fly secrets set ENVIRONMENT=production
+fly secrets set DATABASE_URL_PROD="postgresql://postgres:YOUR_PASSWORD@db.xxx.supabase.co:5432/postgres"
+```
+
+### 3.7 Deploy
+```bash
+fly deploy
+```
+
+Wait for deployment (~2-3 minutes). Your API will be available at:
+```
+https://canadian-charity-api.fly.dev
+```
+
+### 3.8 Test API
+```bash
+# Replace with your actual Fly.io URL
+curl https://canadian-charity-api.fly.dev/
+curl https://canadian-charity-api.fly.dev/charities?page=1&page_size=5
 ```
 
 **Expected response:** JSON with charity data
 
+### 3.9 Useful Fly.io Commands
+```bash
+fly status              # Check app status
+fly logs               # View logs
+fly ssh console        # SSH into machine
+fly scale count 1      # Ensure 1 machine running
+```
+
 **Checkpoint:** ✅ API is deployed and accessible
+
+---
+
+## 🔄 Alternative: Railway or Render
+
+If you prefer Railway or Render:
+
+**Railway:**
+1. Connect GitHub repo
+2. Add environment variables
+3. Set start command: `uvicorn api.main:app --host 0.0.0.0 --port $PORT`
+4. Deploy
+
+**Render:**
+1. Create Web Service
+2. Connect GitHub repo
+3. Build: `pip install -r requirements.txt`
+4. Start: `uvicorn api.main:app --host 0.0.0.0 --port $PORT`
+5. Add environment variables
 
 ---
 
@@ -155,9 +235,9 @@ curl https://your-app.railway.app/charities?page=1&page_size=5
 1. Click **"Environment Variables"**
 2. Add:
    ```
-   NEXT_PUBLIC_API_URL=https://your-app.railway.app
+   NEXT_PUBLIC_API_URL=https://canadian-charities-api.fly.dev/
    ```
-   (Use your Railway URL from Step 3.5)
+   (Use your Fly.io URL from Step 3.7)
 
 ### 4.5 Deploy
 1. Click **"Deploy"**
@@ -203,7 +283,7 @@ git commit -m "Update CORS for production"
 git push
 ```
 
-Railway will automatically redeploy with the new changes.
+Fly.io will automatically redeploy with `fly deploy`.
 
 **Checkpoint:** ✅ Security configured
 
@@ -217,10 +297,10 @@ Railway will automatically redeploy with the new changes.
 2. Add your custom domain
 3. Update DNS records as instructed
 
-**Railway:**
-1. Go to **Settings** → **Networking**
-2. Add custom domain
-3. Update DNS records
+**Fly.io:**
+1. Run `fly certs add your-domain.com`
+2. Update DNS records as instructed
+3. SSL certificates auto-provision
 
 ### 6.2 Enable Analytics
 **Vercel:**
@@ -230,8 +310,8 @@ Railway will automatically redeploy with the new changes.
 **Supabase:**
 - Monitor database usage in **Database** → **Usage**
 
-**Railway:**
-- Monitor API logs in **Deployments** tab
+**Fly.io:**
+- Monitor API logs with `fly logs`
 
 ### 6.3 Set Up Monitoring
 Consider adding:
@@ -239,36 +319,19 @@ Consider adding:
 - **LogRocket** for session replay
 - **Uptime Robot** for uptime monitoring
 
-### 6.4 Schedule Data Updates
-Set up a cron job to update charity data periodically:
+### 6.4 Manual Data Updates
+To update charity data (run once a year or as needed):
 
-**Option A: GitHub Actions**
-Create `.github/workflows/update-data.yml`:
-```yaml
-name: Update Charity Data
-on:
-  schedule:
-    - cron: '0 0 * * 0'  # Weekly on Sunday at midnight
-  workflow_dispatch:  # Manual trigger
+```bash
+# Set environment to production in .env
+ENVIRONMENT=production
+DATABASE_URL_PROD=<your-supabase-url>
 
-jobs:
-  update:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.12'
-      - run: pip install -r requirements.txt
-      - run: python scraper/charity_scraper.py
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+# Run scraper locally
+python scraper/charity_scraper.py
 ```
 
-**Option B: Railway Cron Job**
-1. Create a separate Railway service
-2. Set it to run on a schedule
-3. Execute the scraper script
+The scraper will connect to your production Supabase database and update the data.
 
 **Checkpoint:** ✅ Post-deployment tasks complete
 
@@ -324,23 +387,26 @@ jobs:
 
 ### Issue: Frontend shows "Failed to fetch"
 **Solution:**
-1. Check API is running: Visit `https://your-api-url.railway.app/`
+1. Check API is running: Visit `https://your-api-url.fly.dev/`
 2. Verify `NEXT_PUBLIC_API_URL` in Vercel environment variables
 3. Check CORS settings in `api/main.py`
-4. Redeploy frontend after fixing
+4. Check Fly.io status: `fly status`
+5. Redeploy frontend after fixing
 
 ### Issue: API returns 500 errors
 **Solution:**
-1. Check Railway logs for error details
-2. Verify `DATABASE_URL` is correct
-3. Test database connection from Railway console
-4. Check Supabase is not paused (free tier)
+1. Check Fly.io logs: `fly logs`
+2. Verify `ENVIRONMENT` is set to `production`
+3. Verify `DATABASE_URL_PROD` is correct: `fly secrets list`
+4. SSH into machine: `fly ssh console`
+5. Check Supabase is not paused (free tier)
 
 ### Issue: Database connection timeout
 **Solution:**
 1. Verify Supabase project is active
 2. Check connection string format
-3. Ensure IP allowlist includes Railway IPs (Supabase: Settings → Database → Connection Pooling)
+3. Ensure IP allowlist includes Fly.io IPs (Supabase: Settings → Database → Connection Pooling)
+4. Consider using Supabase connection pooling for better performance
 
 ### Issue: Dynamic filters not working
 **Solution:**
@@ -364,8 +430,8 @@ Your Canadian Charity Search Platform is now live in production!
 
 **URLs to save:**
 - Frontend: `https://your-app.vercel.app`
-- API: `https://your-app.railway.app`
-- API Docs: `https://your-app.railway.app/docs`
+- API: `https://your-app.fly.dev`
+- API Docs: `https://your-app.fly.dev/docs`
 - Database: Supabase Dashboard
 - GitHub: `https://github.com/YOUR_USERNAME/canadian-charity-search`
 
@@ -381,7 +447,7 @@ Your Canadian Charity Search Platform is now live in production!
 ## 📞 Support Resources
 
 - **Vercel Docs**: https://vercel.com/docs
-- **Railway Docs**: https://docs.railway.app
+- **Fly.io Docs**: https://fly.io/docs
 - **Supabase Docs**: https://supabase.com/docs
 - **Next.js Docs**: https://nextjs.org/docs
 - **FastAPI Docs**: https://fastapi.tiangolo.com

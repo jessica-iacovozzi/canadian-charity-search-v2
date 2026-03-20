@@ -29,7 +29,8 @@ git push -u origin main
 2. **New Project → Deploy from GitHub**
 3. Select your repository
 4. Add environment variables:
-   - `DATABASE_URL` = (your Supabase connection string)
+   - `ENVIRONMENT` = `production`
+   - `DATABASE_URL_PROD` = (your Supabase connection string)
    - `API_HOST` = `0.0.0.0`
    - `API_PORT` = `8000`
 5. Set start command: `uvicorn api.main:app --host 0.0.0.0 --port $PORT`

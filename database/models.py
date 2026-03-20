@@ -1,6 +1,5 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, Text, create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, declarative_base
 from datetime import datetime
 import os
 from dotenv import load_dotenv
@@ -40,9 +39,19 @@ class Charity(Base):
         }
 
 def get_engine():
-    database_url = os.getenv('DATABASE_URL')
+    env = os.getenv('ENVIRONMENT', 'local').lower()
+    
+    if env == 'production':
+        database_url = os.getenv('DATABASE_URL_PROD')
+    else:
+        database_url = os.getenv('DATABASE_URL_LOCAL')
+    
     if not database_url:
-        raise ValueError("DATABASE_URL environment variable is not set")
+        raise ValueError(
+            f"Database URL not set for environment '{env}'. "
+            f"Set DATABASE_URL_LOCAL for local or DATABASE_URL_PROD for production."
+        )
+    
     return create_engine(database_url)
 
 def get_session():

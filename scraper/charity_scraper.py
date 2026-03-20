@@ -89,8 +89,8 @@ class CharityIntelligenceScraper:
             print(f"Error extracting details from {url}: {e}")
             return None
     
-    def get_charity_links_with_slogans(self, page_num: int = 1) -> List[Dict]:
-        url = f"{self.LISTING_URL}?page={page_num}"
+    def get_charity_links_with_slogans(self, start: int = 0) -> List[Dict]:
+        url = f"{self.LISTING_URL}?start={start}"
         soup = self.get_page(url)
         if not soup:
             return []
@@ -128,8 +128,8 @@ class CharityIntelligenceScraper:
         
         return charities
     
-    def get_charity_links(self, page_num: int = 1) -> List[str]:
-        charities = self.get_charity_links_with_slogans(page_num)
+    def get_charity_links(self, start: int = 0) -> List[str]:
+        charities = self.get_charity_links_with_slogans(start)
         return [c['url'] for c in charities]
     
     def scrape_all_charities(self, max_pages: Optional[int] = None, max_charities: Optional[int] = None, clean_db_first: bool = False):
@@ -142,11 +142,12 @@ class CharityIntelligenceScraper:
         
         db_session = get_session()
         
+        start = 0
         page = 1
         total_scraped = 0
         
         try:
-            while True:
+            while start <= 840:
                 if max_pages and page > max_pages:
                     break
                 
@@ -154,8 +155,8 @@ class CharityIntelligenceScraper:
                     print(f"\nReached maximum of {max_charities} charities. Stopping.")
                     break
                 
-                print(f"\nScraping page {page}...")
-                charities_info = self.get_charity_links_with_slogans(page)
+                print(f"\nScraping page {page} (start={start})...")
+                charities_info = self.get_charity_links_with_slogans(start)
                 
                 if not charities_info:
                     print(f"No more charities found on page {page}. Stopping.")
@@ -198,6 +199,7 @@ class CharityIntelligenceScraper:
                     else:
                         print(f"    Failed to extract data")
                 
+                start += 20
                 page += 1
                 
         except KeyboardInterrupt:

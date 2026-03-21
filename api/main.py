@@ -61,9 +61,9 @@ def get_charities(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Items per page"),
     search: Optional[str] = Query(None, description="Search by name or slogan"),
-    sector: Optional[str] = Query(None, description="Filter by sector"),
-    province: Optional[str] = Query(None, description="Filter by province"),
-    city: Optional[str] = Query(None, description="Filter by city"),
+    sector: Optional[List[str]] = Query(None, description="Filter by sector(s)"),
+    province: Optional[List[str]] = Query(None, description="Filter by province(s)"),
+    city: Optional[List[str]] = Query(None, description="Filter by city/cities"),
     min_rating: Optional[float] = Query(None, ge=0, le=5, description="Minimum star rating"),
     sort_by: Optional[str] = Query("name", description="Sort by: name, star_rating, city"),
     sort_order: Optional[str] = Query("asc", description="Sort order: asc or desc")
@@ -81,13 +81,16 @@ def get_charities(
             query = query.filter(search_filter)
         
         if sector:
-            query = query.filter(Charity.sector.ilike(f"%{sector}%"))
+            sector_filters = [Charity.sector.ilike(f"%{s}%") for s in sector]
+            query = query.filter(or_(*sector_filters))
         
         if province:
-            query = query.filter(Charity.province.ilike(f"%{province}%"))
+            province_filters = [Charity.province.ilike(f"%{p}%") for p in province]
+            query = query.filter(or_(*province_filters))
         
         if city:
-            query = query.filter(Charity.city.ilike(f"%{city}%"))
+            city_filters = [Charity.city.ilike(f"%{c}%") for c in city]
+            query = query.filter(or_(*city_filters))
         
         if min_rating is not None:
             query = query.filter(Charity.star_rating >= min_rating)
@@ -95,7 +98,7 @@ def get_charities(
         total = query.count()
         
         sort_column = getattr(Charity, sort_by, Charity.name)
-        if sort_order.lower() == "desc":
+        if sort_order and sort_order.lower() == "desc":
             query = query.order_by(sort_column.desc())
         else:
             query = query.order_by(sort_column.asc())
@@ -131,7 +134,7 @@ def get_charity(charity_id: int):
 @app.get("/sectors")
 def get_sectors(
     search: Optional[str] = Query(None, description="Search filter"),
-    province: Optional[str] = Query(None, description="Province filter"),
+    province: Optional[List[str]] = Query(None, description="Province filter(s)"),
     min_rating: Optional[float] = Query(None, ge=0, le=5, description="Minimum star rating")
 ):
     session = get_session()
@@ -147,7 +150,8 @@ def get_sectors(
             query = query.filter(search_filter)
         
         if province:
-            query = query.filter(Charity.province.ilike(f"%{province}%"))
+            province_filters = [Charity.province.ilike(f"%{p}%") for p in province]
+            query = query.filter(or_(*province_filters))
         
         if min_rating is not None:
             query = query.filter(Charity.star_rating >= min_rating)
@@ -161,7 +165,7 @@ def get_sectors(
 @app.get("/provinces")
 def get_provinces(
     search: Optional[str] = Query(None, description="Search filter"),
-    sector: Optional[str] = Query(None, description="Sector filter"),
+    sector: Optional[List[str]] = Query(None, description="Sector filter(s)"),
     min_rating: Optional[float] = Query(None, ge=0, le=5, description="Minimum star rating")
 ):
     session = get_session()
@@ -177,7 +181,8 @@ def get_provinces(
             query = query.filter(search_filter)
         
         if sector:
-            query = query.filter(Charity.sector.ilike(f"%{sector}%"))
+            sector_filters = [Charity.sector.ilike(f"%{s}%") for s in sector]
+            query = query.filter(or_(*sector_filters))
         
         if min_rating is not None:
             query = query.filter(Charity.star_rating >= min_rating)
@@ -189,14 +194,15 @@ def get_provinces(
         session.close()
 
 @app.get("/cities")
-def get_cities(province: Optional[str] = Query(None, description="Filter cities by province")):
+def get_cities(province: Optional[List[str]] = Query(None, description="Filter cities by province(s)")):
     session = get_session()
     
     try:
         query = session.query(Charity.city).distinct().filter(Charity.city.isnot(None))
         
         if province:
-            query = query.filter(Charity.province.ilike(f"%{province}%"))
+            province_filters = [Charity.province.ilike(f"%{p}%") for p in province]
+            query = query.filter(or_(*province_filters))
         
         cities = query.all()
         return {"cities": sorted([c[0] for c in cities if c[0]])}

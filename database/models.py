@@ -1,12 +1,18 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, Text, create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.pool import QueuePool
 from datetime import datetime
 import os
+import threading
 from dotenv import load_dotenv
 
 load_dotenv()
 
 Base = declarative_base()
+
+_engine = None
+_SessionLocal = None
+_lock = threading.Lock()
 
 class Charity(Base):
     __tablename__ = 'charities'
@@ -39,25 +45,46 @@ class Charity(Base):
         }
 
 def get_engine():
-    env = os.getenv('ENVIRONMENT', 'local').lower()
+    global _engine
+    if _engine is not None:
+        return _engine
     
-    if env == 'production':
-        database_url = os.getenv('DATABASE_URL_PROD')
-    else:
-        database_url = os.getenv('DATABASE_URL_LOCAL')
-    
-    if not database_url:
-        raise ValueError(
-            f"Database URL not set for environment '{env}'. "
-            f"Set DATABASE_URL_LOCAL for local or DATABASE_URL_PROD for production."
+    with _lock:
+        if _engine is not None:
+            return _engine
+        
+        env = os.getenv('ENVIRONMENT', 'local').lower()
+        
+        if env == 'production':
+            database_url = os.getenv('DATABASE_URL_PROD')
+        else:
+            database_url = os.getenv('DATABASE_URL_LOCAL')
+        
+        if not database_url:
+            raise ValueError(
+                f"Database URL not set for environment '{env}'. "
+                f"Set DATABASE_URL_LOCAL for local or DATABASE_URL_PROD for production."
+            )
+        
+        _engine = create_engine(
+            database_url,
+            poolclass=QueuePool,
+            pool_size=5,
+            max_overflow=10,
+            pool_timeout=30,
+            pool_recycle=1800,
+            pool_pre_ping=True,
         )
-    
-    return create_engine(database_url)
+        return _engine
 
 def get_session():
-    engine = get_engine()
-    Session = sessionmaker(bind=engine)
-    return Session()
+    global _SessionLocal
+    if _SessionLocal is None:
+        engine = get_engine()
+        with _lock:
+            if _SessionLocal is None:
+                _SessionLocal = sessionmaker(bind=engine)
+    return _SessionLocal()
 
 def init_db():
     engine = get_engine()

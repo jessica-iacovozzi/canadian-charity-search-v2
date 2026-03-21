@@ -2,18 +2,31 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+  background-color: #fbf9f7;
+  color: #1b1c1b;
+  font-family: 'Inter', sans-serif;
+}
+
+.header-anchor {
+  font-family: 'Manrope', sans-serif;
+}
+
+.impact-gauge-track {
+  height: 2px;
+  background-color: #e3beb8;
+  width: 100%;
+  position: relative;
+}
+
+.impact-gauge-fill {
+  height: 2px;
+  background-color: #610000;
+  position: absolute;
+  left: 0;
+  top: 0;
 }

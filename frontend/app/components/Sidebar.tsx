@@ -1,5 +1,7 @@
 'use client'
 
+import { useState } from 'react'
+
 interface SidebarProps {
   sectors: string[]
   provinces: string[]
@@ -14,6 +16,9 @@ interface SidebarProps {
   onSortChange: (value: string) => void
   onToggleSection: (section: string) => void
   onReset: () => void
+  search?: string
+  setSearch?: (value: string) => void
+  onSearchSubmit?: () => void
 }
 
 export default function Sidebar({
@@ -30,21 +35,101 @@ export default function Sidebar({
   onSortChange,
   onToggleSection,
   onReset,
+  search,
+  setSearch,
+  onSearchSubmit,
 }: SidebarProps) {
+  const [isCollapsed, setIsCollapsed] = useState(true)
+
+  const activeFiltersCount = selectedSectors.length + selectedProvinces.length + (minRating > 0 ? 1 : 0)
+
   return (
-    <aside className="fixed left-0 top-16 h-screen w-[350px] bg-stone-50 dark:bg-stone-950 flex flex-col p-6 gap-y-4 font-body text-sm tracking-wide transition-transform duration-300 overflow-y-auto pb-24">
-      <div className="mb-2">
-        <h2 className="text-red-900 dark:text-red-500 font-bold uppercase tracking-widest text-xs">
-          Filters
-        </h2>
-        <p className="text-stone-500 text-xs mt-1">Refine your search</p>
+    <>
+      {/* Mobile Filter Toggle Button */}
+      <button
+        onClick={() => setIsCollapsed(!isCollapsed)}
+        className="lg:hidden fixed top-20 left-4 z-40 flex items-center gap-2 bg-red-900 text-white px-4 py-2 rounded-lg shadow-lg"
+        aria-label="Toggle filters"
+        aria-expanded={!isCollapsed}
+      >
+        <span className="material-symbols-outlined text-[20px]">
+          {isCollapsed ? 'filter_list' : 'close'}
+        </span>
+        <span className="text-sm font-bold">Filters</span>
+        {activeFiltersCount > 0 && (
+          <span className="bg-white text-red-900 text-xs font-bold px-2 py-0.5 rounded-full">
+            {activeFiltersCount}
+          </span>
+        )}
+      </button>
+
+      {/* Overlay for mobile */}
+      {!isCollapsed && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black/50 z-30"
+          onClick={() => setIsCollapsed(true)}
+          aria-hidden="true"
+        />
+      )}
+
+      <aside
+        className={`
+          fixed left-0 bg-stone-50 dark:bg-stone-950 flex flex-col p-6 gap-y-4 font-body text-sm tracking-wide transition-all duration-300 overflow-y-auto z-40
+          
+          /* Mobile: full width, slides from top */
+          top-16 w-full pb-6 max-h-[90vh]
+          ${isCollapsed ? '-translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'}
+          
+          /* Desktop: fixed sidebar */
+          lg:translate-y-0 lg:opacity-100 lg:pointer-events-auto
+          lg:w-[350px] lg:h-screen lg:max-h-none lg:pb-24
+        `}
+      >
+      <div className="mb-2 flex items-center justify-between">
+        <div>
+          <h2 className="text-red-900 dark:text-red-500 font-bold uppercase tracking-widest text-xs">
+            Filters
+          </h2>
+          <p className="text-stone-500 text-xs mt-1">Refine your search</p>
+        </div>
+        <button
+          onClick={() => setIsCollapsed(true)}
+          className="lg:hidden p-2 aspect-square w-100 hover:bg-stone-200 dark:hover:bg-stone-800 rounded-full transition-colors"
+          aria-label="Close filters"
+        >
+          <span className="material-symbols-outlined text-stone-500">close</span>
+        </button>
       </div>
+
+      {/* Search bar - visible only on mobile/tablet */}
+      {setSearch && (
+        <div className="lg:hidden mb-4">
+          <div className="relative">
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/50">
+              search
+            </span>
+            <input
+              className="w-full bg-surface-container-highest border-none outline-none focus:ring-2 focus:ring-primary/20 rounded-lg py-2 pl-10 pr-4 text-sm transition-all placeholder:text-on-surface-variant/40 cursor-text"
+              placeholder="Search by name or slogan..."
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  onSearchSubmit?.()
+                  setIsCollapsed(true)
+                }
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Sector Multi-select */}
       <div className="space-y-3">
         <button
           onClick={() => onToggleSection('sectors')}
-          className="flex items-center justify-between w-full text-red-900 dark:text-red-400 font-bold bg-stone-100 dark:bg-stone-900 p-2 rounded cursor-pointer"
+          className="flex items-center justify-between w-full text-stone-500 hover:text-red-800 p-2 cursor-pointer"
         >
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-[20px]">category</span>
@@ -175,11 +260,23 @@ export default function Sidebar({
       </div>
 
       <button
-        onClick={onReset}
+        onClick={() => {
+          onReset()
+          setIsCollapsed(true)
+        }}
         className="mt-8 text-xs font-bold uppercase tracking-widest text-red-900 dark:text-red-500 underline hover:no-underline transition-all text-left px-2 cursor-pointer"
       >
         Reset All Filters
       </button>
+
+      {/* Apply Filters button - mobile only */}
+      <button
+        onClick={() => setIsCollapsed(true)}
+        className="lg:hidden mt-4 w-full bg-red-900 text-white py-3 rounded-lg font-bold text-sm hover:bg-red-800 transition-colors"
+      >
+        Apply Filters
+      </button>
     </aside>
+    </>
   )
 }

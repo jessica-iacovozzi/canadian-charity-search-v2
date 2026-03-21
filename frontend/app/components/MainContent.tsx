@@ -53,9 +53,9 @@ export default function MainContent({
   onPageChange,
 }: MainContentProps) {
   return (
-    <main className="ml-[350px] flex-1 p-12 bg-surface">
-      <header className="mb-12">
-        <h1 className="font-headline text-4xl font-extrabold tracking-tight text-primary mb-4">
+    <main className="flex-1 p-6 pt-20 md:p-8 md:pt-24 lg:ml-[350px] lg:p-12 lg:pt-12 bg-surface">
+      <header className="mb-8 lg:mb-12">
+        <h1 className="font-headline text-2xl md:text-3xl lg:text-4xl font-extrabold tracking-tight text-primary mb-4">
           Discover Charities
         </h1>
         <p className="font-body text-on-surface-variant max-w-2xl leading-relaxed">
@@ -84,13 +84,13 @@ export default function MainContent({
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6 lg:gap-8">
             {charities.map((charity) => (
               <article
                 key={charity.id}
                 className="bg-surface-container-lowest p-6 rounded transition-all hover:bg-white hover:shadow-2xl hover:shadow-on-surface/5 group flex flex-col"
               >
-                <div className="flex justify-between items-start mb-4">
+                <div className="flex justify-between items-start mb-4 gap-4">
                   {charity.sector && (
                     <span className="label-md text-[10px] uppercase tracking-widest font-bold text-on-surface-variant bg-surface-container-low px-2 py-1 rounded">
                       {charity.sector}

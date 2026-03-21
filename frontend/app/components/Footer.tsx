@@ -6,7 +6,7 @@ export default function Footer() {
       <p className="font-body text-xs uppercase tracking-widest text-stone-400">
         © 2026 Canadian Philanthropy Archive. All rights reserved. Data sourced from CRA.
       </p>
-      <div className="flex gap-8">
+      <div className="flex gap-4">
         <a
           className="font-body text-xs uppercase tracking-widest text-stone-400 hover:text-red-900 transition-all cursor-pointer"
           href="#"

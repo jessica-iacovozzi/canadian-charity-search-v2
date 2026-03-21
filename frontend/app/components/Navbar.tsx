@@ -15,7 +15,8 @@ export default function Navbar({ search, setSearch, onSearchSubmit }: NavbarProp
             Canadian Charity Archive
           </span>
         </div>
-        <div className="flex-1 px-8 mx-auto max-w-2xl">
+        {/* Search bar - hidden on mobile/tablet, visible on desktop */}
+        <div className="hidden lg:block flex-1 px-8 mx-auto max-w-2xl">
           <div className="relative group">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant/50">
               search
@@ -29,13 +30,6 @@ export default function Navbar({ search, setSearch, onSearchSubmit }: NavbarProp
               onKeyDown={(e) => e.key === 'Enter' && onSearchSubmit()}
             />
           </div>
-        </div>
-        <div className="flex items-center gap-4">
-          <button className="p-2 hover:bg-stone-50 dark:hover:bg-stone-800 transition-all rounded-full cursor-pointer">
-            <span className="material-symbols-outlined text-red-900 dark:text-red-500">
-              account_circle
-            </span>
-          </button>
         </div>
       </div>
     </header>

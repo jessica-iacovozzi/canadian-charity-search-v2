@@ -180,6 +180,9 @@ export default function Home() {
           onSortChange={setSortBy}
           onToggleSection={toggleSection}
           onReset={handleReset}
+          search={search}
+          setSearch={setSearch}
+          onSearchSubmit={() => setPage(1)}
         />
 
         <MainContent

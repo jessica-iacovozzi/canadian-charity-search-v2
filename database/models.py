@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, Text, create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
-from sqlalchemy.pool import QueuePool
+from sqlalchemy.pool import QueuePool, NullPool
 from datetime import datetime
 import os
 import threading
@@ -66,15 +66,26 @@ def get_engine():
                 f"Set DATABASE_URL_LOCAL for local or DATABASE_URL_PROD for production."
             )
         
-        _engine = create_engine(
-            database_url,
-            poolclass=QueuePool,
-            pool_size=5,
-            max_overflow=10,
-            pool_timeout=30,
-            pool_recycle=1800,
-            pool_pre_ping=True,
-        )
+        if env == 'production':
+            # Use NullPool for serverless/auto-scaling environments (Fly.io, etc.)
+            # This creates fresh connections per request and closes them immediately,
+            # preventing connection exhaustion when machines spin up/down
+            _engine = create_engine(
+                database_url,
+                poolclass=NullPool,
+                pool_pre_ping=True,
+            )
+        else:
+            # Use QueuePool for local development with persistent connections
+            _engine = create_engine(
+                database_url,
+                poolclass=QueuePool,
+                pool_size=5,
+                max_overflow=10,
+                pool_timeout=30,
+                pool_recycle=1800,
+                pool_pre_ping=True,
+            )
         return _engine
 
 def get_session():

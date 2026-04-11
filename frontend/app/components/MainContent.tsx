@@ -3,6 +3,16 @@
 import Pagination from './Pagination'
 import Footer from './Footer'
 
+function isValidUrl(url: string | null | undefined): boolean {
+  if (!url) return false
+  try {
+    const parsed = new URL(url)
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
 interface Charity {
   id: number
   name: string
@@ -122,14 +132,18 @@ export default function MainContent({
                       BN: {charity.registration_number}
                     </span>
                   )}
-                  <a
-                    href={charity.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs font-bold text-primary hover:underline transition-all cursor-pointer"
-                  >
-                    View Details
-                  </a>
+                  {isValidUrl(charity.link) ? (
+                    <a
+                      href={charity.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs font-bold text-primary hover:underline transition-all cursor-pointer"
+                    >
+                      View Details
+                    </a>
+                  ) : (
+                    <span className="text-xs text-stone-400">Invalid link</span>
+                  )}
                 </div>
               </article>
             ))}

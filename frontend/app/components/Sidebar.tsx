@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 
 interface SidebarProps {
   sectors: string[]
@@ -43,6 +43,10 @@ export default function Sidebar({
 
   const activeFiltersCount = selectedSectors.length + selectedProvinces.length + (minRating > 0 ? 1 : 0)
 
+  const handleOverlayClick = useCallback(() => {
+    setIsCollapsed(true)
+  }, [])
+
   return (
     <>
       {/* Mobile Filter Toggle Button */}
@@ -67,7 +71,7 @@ export default function Sidebar({
       {!isCollapsed && (
         <div
           className="lg:hidden fixed inset-0 bg-black/50 z-30"
-          onClick={() => setIsCollapsed(true)}
+          onClick={handleOverlayClick}
           aria-hidden="true"
         />
       )}
@@ -213,8 +217,10 @@ export default function Sidebar({
               {[1, 2, 3, 4, 5].map((i) => (
                 <button
                   key={i}
+                  type="button"
                   onClick={() => onRatingClick(i)}
                   aria-label={`Filter by ${i} or more stars`}
+                  aria-pressed={i <= minRating}
                   className="material-symbols-outlined text-primary cursor-pointer hover:scale-110 transition-transform"
                   style={{ fontVariationSettings: i <= minRating ? "'FILL' 1" : "'FILL' 0" }}
                 >

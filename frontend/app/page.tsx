@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Navbar from './components/Navbar'
 import Sidebar from './components/Sidebar'
 import MainContent from './components/MainContent'
@@ -43,6 +43,8 @@ export default function Home() {
   const PAGE_SIZE = 18
 
   useEffect(() => {
+    const controller = new AbortController()
+    
     const fetchSectors = async () => {
       try {
         const params = new URLSearchParams()
@@ -50,18 +52,25 @@ export default function Home() {
         selectedProvinces.forEach((p) => params.append('province', p))
         if (minRating) params.append('min_rating', minRating.toString())
         
-        const response = await fetch(`${API_URL}/sectors?${params}`)
+        const response = await fetch(`${API_URL}/sectors?${params}`, {
+          signal: controller.signal
+        })
         if (!response.ok) throw new Error('Failed to fetch sectors')
         const data = await response.json()
         setSectors(data.sectors || [])
       } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') return
         console.error('Error fetching sectors:', err)
       }
     }
     fetchSectors()
+    
+    return () => controller.abort()
   }, [API_URL, search, selectedProvinces, minRating])
 
   useEffect(() => {
+    const controller = new AbortController()
+    
     const fetchProvinces = async () => {
       try {
         const params = new URLSearchParams()
@@ -69,23 +78,35 @@ export default function Home() {
         selectedSectors.forEach((s) => params.append('sector', s))
         if (minRating) params.append('min_rating', minRating.toString())
         
-        const response = await fetch(`${API_URL}/provinces?${params}`)
+        const response = await fetch(`${API_URL}/provinces?${params}`, {
+          signal: controller.signal
+        })
         if (!response.ok) throw new Error('Failed to fetch provinces')
         const data = await response.json()
         setProvinces(data.provinces || [])
       } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') return
         console.error('Error fetching provinces:', err)
       }
     }
     fetchProvinces()
+    
+    return () => controller.abort()
   }, [API_URL, search, selectedSectors, minRating])
 
   useEffect(() => {
+    const controller = new AbortController()
+    
     const fetchCharities = async () => {
       setLoading(true)
       setError(null)
       try {
         const lastUnderscoreIndex = sortBy.lastIndexOf('_')
+        if (lastUnderscoreIndex === -1) {
+          console.error('Invalid sortBy format:', sortBy)
+          setSortBy('name_asc')
+          return
+        }
         const sortField = sortBy.substring(0, lastUnderscoreIndex)
         const sortOrder = sortBy.substring(lastUnderscoreIndex + 1)
         
@@ -101,13 +122,16 @@ export default function Home() {
         selectedProvinces.forEach((p) => params.append('province', p))
         if (minRating) params.append('min_rating', minRating.toString())
 
-        const response = await fetch(`${API_URL}/charities?${params}`)
+        const response = await fetch(`${API_URL}/charities?${params}`, {
+          signal: controller.signal
+        })
         if (!response.ok) throw new Error('Failed to fetch charities')
         const data: ApiResponse = await response.json()
         
         setCharities(data.charities)
         setTotal(data.total)
       } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') return
         console.error('Error fetching charities:', err)
         setError('Failed to load charities. Please try again.')
         setCharities([])
@@ -117,43 +141,45 @@ export default function Home() {
       }
     }
     fetchCharities()
+    
+    return () => controller.abort()
   }, [API_URL, page, search, selectedSectors, selectedProvinces, minRating, sortBy])
 
-  const handleSectorToggle = (sectorName: string) => {
+  const handleSectorToggle = useCallback((sectorName: string) => {
     setSelectedSectors((prev) =>
       prev.includes(sectorName)
         ? prev.filter((s) => s !== sectorName)
         : [...prev, sectorName]
     )
     setPage(1)
-  }
+  }, [setPage])
 
-  const handleProvinceToggle = (provinceName: string) => {
+  const handleProvinceToggle = useCallback((provinceName: string) => {
     setSelectedProvinces((prev) =>
       prev.includes(provinceName)
         ? prev.filter((p) => p !== provinceName)
         : [...prev, provinceName]
     )
     setPage(1)
-  }
+  }, [setPage])
 
-  const handleRatingClick = (clickedRating: number) => {
-    setMinRating(clickedRating === minRating ? 0 : clickedRating)
+  const handleRatingClick = useCallback((clickedRating: number) => {
+    setMinRating((prev) => clickedRating === prev ? 0 : clickedRating)
     setPage(1)
-  }
+  }, [setPage])
 
-  const toggleSection = (section: string) => {
-    setOpenSection(openSection === section ? null : section)
-  }
+  const toggleSection = useCallback((section: string) => {
+    setOpenSection((prev) => prev === section ? null : section)
+  }, [])
 
-  const handleReset = () => {
+  const handleReset = useCallback(() => {
     setSearch('')
     setSelectedSectors([])
     setSelectedProvinces([])
     setMinRating(0)
     setSortBy('name_asc')
     setPage(1)
-  }
+  }, [])
 
   const totalPages = Math.ceil(total / PAGE_SIZE)
 
